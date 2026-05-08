@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PSY1 Tracker</title>
+<link rel="icon" type="image/x-icon" href="icon.ico">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#F5F2EE">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F5F2EE; --surface: #FFFFFF; --surface-2: #F9F7F5;
+    --border: #E8E3DC; --border-soft: #F0EDE8;
+    --text: #1A1714; --text-2: #6B645C; --text-3: #A89F95;
+    --accent: #2D5BE3; --accent-light: #EBF0FF;
+    --green: #1A8A5A; --green-light: #E4F5ED;
+    --amber: #B86E00; --amber-light: #FEF3E0;
+    --red: #C0392B; --red-light: #FDECEA;
+    --star: #E8A020;
+    --r: 16px; --r-sm: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+  }
+  html { font-size: 15px; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
+  .sidebar { width: 220px; min-height: 100vh; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; flex-shrink: 0; }
+  .logo { padding: 28px 24px 20px; border-bottom: 1px solid var(--border-soft); }
+  .logo-title { font-family: 'Instrument Serif', serif; font-size: 1.7rem; color: var(--text); letter-spacing: -0.02em; line-height: 1; }
+  .logo-sub { font-size: 0.72rem; color: var(--text-3); font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; margin-top: 4px; }
+  .nav { padding: 12px 10px; flex: 1; }
+  .nav-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; border: none; background: none; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 400; color: var(--text-2); cursor: pointer; text-align: left; transition: all 0.15s ease; margin-bottom: 2px; }
+  .nav-btn:hover { background: var(--surface-2); color: var(--text); }
+  .nav-btn.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+  .nav-icon { font-size: 1rem; width: 20px; text-align: center; }
+  .sidebar-footer { padding: 16px 24px; border-top: 1px solid var(--border-soft); font-size: 0.72rem; color: var(--text-3); }
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 32px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+  .page-title { font-family: 'Instrument Serif', serif; font-size: 1.35rem; color: var(--text); letter-spacing: -0.01em; }
+  .content { padding: 28px 32px; flex: 1; }
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+  .stat-card { background: var(--surface); border-radius: var(--r); padding: 20px 22px; box-shadow: var(--shadow); border: 1px solid var(--border-soft); }
+  .stat-label { font-size: 0.75rem; font-weight: 500; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+  .stat-value { font-family: 'Instrument Serif', serif; font-size: 2rem; color: var(--text); line-height: 1; }
+  .stat-sub { font-size: 0.75rem; color: var(--text-3); margin-top: 4px; }
+  .card { background: var(--surface); border-radius: var(--r); padding: 22px 24px; box-shadow: var(--shadow); border: 1px solid var(--border-soft); margin-bottom: 18px; }
+  .card-title { font-size: 0.72rem; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; }
+  .activity-row { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-soft); gap: 12px; }
+  .activity-row:last-child { border-bottom: none; }
+  .activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .activity-name { flex: 1; font-size: 0.9rem; }
+  .activity-date { font-size: 0.8rem; color: var(--text-3); }
+  .score-badge { font-size: 0.82rem; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+  .score-green { background: var(--green-light); color: var(--green); }
+  .score-amber { background: var(--amber-light); color: var(--amber); }
+  .score-red { background: var(--red-light); color: var(--red); }
+  .chart-container { position: relative; width: 100%; max-width: 480px; margin: 0 auto; }
+  .cat-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .cat-btn { padding: 6px 16px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--surface); font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 500; color: var(--text-2); cursor: pointer; transition: all 0.15s; }
+  .cat-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .cat-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tests-header { display: grid; grid-template-columns: 2fr 1fr 120px 80px 120px 100px; gap: 8px; padding: 0 0 10px; font-size: 0.72rem; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.07em; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+  .test-row { display: grid; grid-template-columns: 2fr 1fr 120px 80px 120px 100px; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--border-soft); align-items: center; transition: background 0.1s; }
+  .test-row:last-child { border-bottom: none; }
+  .test-row:hover { background: var(--surface-2); border-radius: var(--r-sm); }
+  .test-name { font-size: 0.9rem; font-weight: 500; }
+  .cat-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; font-weight: 500; padding: 3px 10px; border-radius: 20px; }
+  .stars-row { display: flex; gap: 2px; }
+  .star { font-size: 0.9rem; transition: color 0.2s; }
+  .star-on { color: var(--star); }
+  .star-off { color: var(--border); }
+  .status-pill { font-size: 0.75rem; font-weight: 500; padding: 3px 10px; border-radius: 20px; display: inline-block; }
+  .status-notstarted { background: var(--surface-2); color: var(--text-3); }
+  .status-inprogress { background: var(--accent-light); color: var(--accent); }
+  .status-mastered { background: var(--green-light); color: var(--green); }
+  .add-btn { padding: 5px 14px; border-radius: var(--r-sm); border: 1.5px solid var(--border); background: var(--surface); font-family: 'DM Sans', sans-serif; font-size: 0.8rem; font-weight: 500; color: var(--text-2); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .add-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .test-select-wrap { margin-bottom: 20px; }
+  .test-select-wrap label { font-size: 0.8rem; font-weight: 500; color: var(--text-2); display: block; margin-bottom: 6px; }
+  .test-select { padding: 10px 14px; border-radius: var(--r-sm); border: 1.5px solid var(--border); background: var(--surface); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--text); appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B645C' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; cursor: pointer; min-width: 260px; }
+  .test-select:focus { outline: none; border-color: var(--accent); }
+  .prog-history { margin-top: 16px; }
+  .hist-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border-soft); font-size: 0.88rem; }
+  .hist-row:last-child { border-bottom: none; }
+  .hist-date { color: var(--text-3); width: 100px; flex-shrink: 0; }
+  .hist-bar-wrap { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .hist-bar { height: 100%; border-radius: 3px; transition: width 0.4s; }
+  .trend-up { color: var(--green); font-weight: 600; font-size: 0.8rem; width: 44px; text-align: right; flex-shrink: 0; }
+  .trend-down { color: var(--red); font-weight: 600; font-size: 0.8rem; width: 44px; text-align: right; flex-shrink: 0; }
+  .trend-flat { color: var(--text-3); font-size: 0.8rem; width: 44px; text-align: right; flex-shrink: 0; }
+  .hist-score { font-weight: 600; width: 44px; text-align: right; flex-shrink: 0; }
+  .insight-card { display: flex; gap: 14px; padding: 16px 18px; background: var(--surface-2); border-radius: var(--r-sm); border: 1px solid var(--border-soft); margin-bottom: 10px; align-items: flex-start; animation: fadeUp 0.3s ease backwards; }
+  .insight-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+  .insight-text { font-size: 0.9rem; color: var(--text); line-height: 1.5; }
+  .insight-text strong { color: var(--text); }
+  .cat-breakdown { margin-top: 6px; }
+  .cb-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border-soft); }
+  .cb-row:last-child { border-bottom: none; }
+  .cb-name { width: 130px; font-size: 0.88rem; font-weight: 500; }
+  .cb-bar-wrap { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .cb-bar { height: 100%; border-radius: 3px; }
+  .cb-avg { font-size: 0.85rem; font-weight: 600; width: 56px; text-align: right; }
+  .cb-count { font-size: 0.78rem; color: var(--text-3); width: 60px; text-align: right; }
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(26,23,20,0.35); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; }
+  .modal-bg.open { display: flex; }
+  .modal { background: var(--surface); border-radius: 20px; padding: 28px 28px 24px; width: 360px; box-shadow: var(--shadow-lg); animation: scaleIn 0.2s ease; }
+  @keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @keyframes fadeUp { from { transform: translateY(6px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-title { font-family: 'Instrument Serif', serif; font-size: 1.3rem; margin-bottom: 4px; }
+  .modal-sub { font-size: 0.82rem; color: var(--text-3); margin-bottom: 22px; }
+  .score-preview { text-align: center; font-family: 'Instrument Serif', serif; font-size: 3.5rem; margin: 4px 0 10px; transition: color 0.2s; line-height: 1; }
+  .score-label { text-align: center; font-size: 0.78rem; color: var(--text-3); margin-bottom: 16px; }
+  .slider-wrap { margin-bottom: 18px; }
+  .slider-track { width: 100%; -webkit-appearance: none; height: 6px; border-radius: 3px; background: var(--border); outline: none; cursor: pointer; }
+  .slider-track::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); border: 3px solid white; box-shadow: 0 2px 8px rgba(45,91,227,0.35); cursor: pointer; transition: transform 0.1s; }
+  .slider-track::-webkit-slider-thumb:active { transform: scale(1.15); }
+  .slider-labels { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-3); margin-top: 6px; }
+  .date-row { margin-bottom: 20px; }
+  .date-row label { font-size: 0.8rem; font-weight: 500; color: var(--text-2); display: block; margin-bottom: 6px; }
+  .date-input { width: 100%; padding: 9px 12px; border-radius: var(--r-sm); border: 1.5px solid var(--border); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--text); background: var(--surface); }
+  .date-input:focus { outline: none; border-color: var(--accent); }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .btn-cancel { padding: 9px 18px; border-radius: var(--r-sm); border: 1.5px solid var(--border); background: var(--surface); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500; color: var(--text-2); cursor: pointer; transition: all 0.15s; }
+  .btn-cancel:hover { background: var(--surface-2); }
+  .btn-save { padding: 9px 22px; border-radius: var(--r-sm); border: none; background: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 600; color: white; cursor: pointer; transition: all 0.15s; box-shadow: 0 2px 8px rgba(45,91,227,0.25); }
+  .btn-save:hover { background: #2450CC; box-shadow: 0 4px 14px rgba(45,91,227,0.3); }
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--text-3); font-size: 0.9rem; }
+  .empty-state .e-icon { font-size: 2.5rem; margin-bottom: 10px; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .overview-grid { display: grid; grid-template-columns: 1fr 400px; gap: 18px; }
+  @media (max-width: 1000px) { .overview-grid { grid-template-columns: 1fr; } .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+  .export-row { display: flex; gap: 10px; margin-bottom: 18px; }
+  .export-btn { padding: 8px 16px; border-radius: var(--r-sm); border: 1.5px solid var(--border); background: var(--surface); font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 500; color: var(--text-2); cursor: pointer; transition: all 0.15s; }
+  .export-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  #importFile { display: none; }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-title">PSY1</div>
+    <div class="logo-sub">Tracker</div>
+  </div>
+  <nav class="nav">
+    <button class="nav-btn active" onclick="switchTab('overview')" id="nav-overview">
+      <span class="nav-icon">◈</span> Overview
+    </button>
+    <button class="nav-btn" onclick="switchTab('tests')" id="nav-tests">
+      <span class="nav-icon">≡</span> All tests
+    </button>
+    <button class="nav-btn" onclick="switchTab('progress')" id="nav-progress">
+      <span class="nav-icon">↗</span> Progress
+    </button>
+    <button class="nav-btn" onclick="switchTab('insights')" id="nav-insights">
+      <span class="nav-icon">✦</span> Insights
+    </button>
+  </nav>
+  <div class="sidebar-footer">Data saved locally</div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="page-title" id="page-title">Overview</div>
+    <div class="export-row">
+      <button class="export-btn" onclick="exportData()">⬇ Export</button>
+      <button class="export-btn" onclick="document.getElementById('importFile').click()">⬆ Import</button>
+      <input type="file" id="importFile" accept=".json" onchange="importData(this)">
+    </div>
+  </div>
+  <div class="content" id="content"></div>
+</div>
+
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Add score</div>
+    <div class="modal-sub" id="modal-sub">—</div>
+    <div class="score-preview" id="score-preview">5</div>
+    <div class="score-label">/ 10</div>
+    <div class="slider-wrap">
+      <input type="range" class="slider-track" id="score-slider" min="1" max="10" value="5" oninput="updateSlider(this.value)">
+      <div class="slider-labels"><span>1</span><span>5</span><span>10</span></div>
+    </div>
+    <div class="date-row">
+      <label>Date</label>
+      <input type="date" class="date-input" id="score-date">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveScore()">Save score</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Data ──────────────────────────────────────────────────────────────────
+const TESTS = [
+  {id:"voitures",    name:"Voitures",                           cat:"Spatiale",      tpp:18,  planches:40, time:"12m"},
+  {id:"reperage",    name:"Test repérage objets",               cat:"Spatiale",      tpp:34,  planches:30, time:"17m"},
+  {id:"cercles",     name:"Cercles et points",                  cat:"Spatiale",      tpp:16,  planches:30, time:"8m"},
+  {id:"angles",      name:"Angles",                             cat:"Spatiale",      tpp:12,  planches:30, time:"6m"},
+  {id:"patrons",     name:"Patrons de cubes",                   cat:"Spatiale",      tpp:54,  planches:20, time:"18m"},
+  {id:"psychomoteur",name:"Psychomoteur",                       cat:"Psychomoteur",  tpp:null,planches:null,time:null},
+  {id:"compteurs",   name:"Test des compteurs",                 cat:"Numérique",     tpp:30,  planches:20, time:"10m"},
+  {id:"attention3",  name:"Attention 3",                        cat:"Numérique",     tpp:30,  planches:12, time:"6m"},
+  {id:"cm1",         name:"CM 1",                               cat:"Numérique",     tpp:21,  planches:10, time:"3m30"},
+  {id:"cm2",         name:"CM 2",                               cat:"Numérique",     tpp:36,  planches:10, time:"6m"},
+  {id:"cm3",         name:"CM 3",                               cat:"Numérique",     tpp:40,  planches:12, time:"8m"},
+  {id:"cm4",         name:"CM 4",                               cat:"Numérique",     tpp:24,  planches:10, time:"4m"},
+  {id:"calculs",     name:"Calculs et mémorisation",            cat:"Numérique",     tpp:90,  planches:10, time:"15m"},
+  {id:"maths",       name:"Mathématiques",                      cat:"Intellectuelle",tpp:70,  planches:30, time:"35m"},
+  {id:"raven",       name:"Matrice de Raven",                   cat:"Intellectuelle",tpp:25,  planches:48, time:"20m"},
+  {id:"attention2",  name:"Attention 2 + Tâches Perturbatrices",cat:"Attention",     tpp:90,  planches:10, time:"15m"},
+];
+const CATS = ["Spatiale","Psychomoteur","Numérique","Intellectuelle","Attention"];
+const CAT_COLORS = {
+  Spatiale:"#2D5BE3", Psychomoteur:"#C0392B", Numérique:"#1A8A5A",
+  Intellectuelle:"#7B35CE", Attention:"#B86E00"
+};
+const CAT_BG = {
+  Spatiale:"#EBF0FF", Psychomoteur:"#FDECEA", Numérique:"#E4F5ED",
+  Intellectuelle:"#F2ECFD", Attention:"#FEF3E0"
+};
+
+// ── Storage ───────────────────────────────────────────────────────────────
+let scores = {};
+try { scores = JSON.parse(localStorage.getItem('psy1_scores') || '{}'); }
+catch { scores = {}; }
+
+function saveScores() {
+  localStorage.setItem('psy1_scores', JSON.stringify(scores));
+}
+
+function exportData() {
+  const data = JSON.stringify(scores, null, 2);
+  const blob = new Blob([data], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'psy1_scores_' + new Date().toISOString().split('T')[0] + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (typeof imported === 'object' && imported !== null) {
+        scores = imported;
+        saveScores();
+        switchTab(activeTab);
+        alert('Data imported successfully!');
+      } else {
+        alert('Invalid file format.');
+      }
+    } catch (err) {
+      alert('Error reading file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+// ── Logic ─────────────────────────────────────────────────────────────────
+function getAttempts(id) { return (scores[id] || []).sort((a,b)=>a.date.localeCompare(b.date)); }
+function getLast3(id) { const a=getAttempts(id); return a.slice(-3); }
+function computeStars(id) {
+  const a = getLast3(id);
+  if (!a.length) return 0;
+  const avg = a.reduce((s,x)=>s+x.score,0)/a.length;
+  if (avg>=9) return 5; if (avg>=7) return 4;
+  if (avg>=5) return 3; if (avg>=3) return 2; return 1;
+}
+function getStatus(id) {
+  if (!getAttempts(id).length) return 'Not started';
+  return computeStars(id)===5 ? 'Mastered' : 'In progress';
+}
+function getLatest(id) { const a=getAttempts(id); return a.length ? a[a.length-1] : null; }
+function catAvg(cat) {
+  const tests = TESTS.filter(t=>t.cat===cat && getLast3(t.id).length);
+  if (!tests.length) return 0;
+  const vals = tests.map(t=>{ const a=getLast3(t.id); return a.reduce((s,x)=>s+x.score,0)/a.length; });
+  return vals.reduce((s,v)=>s+v,0)/vals.length;
+}
+function scoreColor(s) {
+  if (s>=8) return '#1A8A5A'; if (s>=5) return '#B86E00'; return '#C0392B';
+}
+function scoreBadgeClass(s) {
+  if (s>=8) return 'score-green'; if (s>=5) return 'score-amber'; return 'score-red';
+}
+function starsHTML(n, size='0.9rem') {
+  return Array.from({length:5},(_,i)=>`<span class="star ${i<n?'star-on':'star-off'}" style="font-size:${size}">★</span>`).join('');
+}
+function statusPill(status) {
+  const cls = status==='Mastered'?'status-mastered':status==='In progress'?'status-inprogress':'status-notstarted';
+  return `<span class="status-pill ${cls}">${status}</span>`;
+}
+
+// ── Tab system ────────────────────────────────────────────────────────────
+let activeTab = 'overview';
+const pageTitles = {overview:'Overview',tests:'All tests',progress:'Progress',insights:'Insights'};
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('nav-'+tab).classList.add('active');
+  document.getElementById('page-title').textContent = pageTitles[tab];
+  const c = document.getElementById('content');
+  c.innerHTML = '';
+  ({overview:renderOverview,tests:renderTests,progress:renderProgress,insights:renderInsights}[tab])();
+}
+
+// ── Overview ──────────────────────────────────────────────────────────────
+let spiderChart = null;
+function renderOverview() {
+  const c = document.getElementById('content');
+  const tested = TESTS.filter(t=>getAttempts(t.id).length);
+  const allAttm = TESTS.reduce((s,t)=>s+getAttempts(t.id).length,0);
+  const avgs = tested.map(t=>{ const a=getLast3(t.id); return a.reduce((s,x)=>s+x.score,0)/a.length; });
+  const globalAvg = avgs.length ? (avgs.reduce((s,v)=>s+v,0)/avgs.length).toFixed(1) : '—';
+  const mastered = TESTS.filter(t=>getStatus(t.id)==='Mastered').length;
+
+  c.innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">Tests logged</div><div class="stat-value">${tested.length}</div><div class="stat-sub">of ${TESTS.length} total</div></div>
+      <div class="stat-card"><div class="stat-label">Global average</div><div class="stat-value">${globalAvg}</div><div class="stat-sub">last 3 attempts / test</div></div>
+      <div class="stat-card"><div class="stat-label">Total attempts</div><div class="stat-value">${allAttm}</div><div class="stat-sub">across all tests</div></div>
+      <div class="stat-card"><div class="stat-label">Mastered</div><div class="stat-value">${mastered}</div><div class="stat-sub">★★★★★ tests</div></div>
+    </div>
+    <div class="overview-grid">
+      <div class="card">
+        <div class="card-title">Recent activity</div>
+        <div id="recent-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Scores by category</div>
+        <div class="chart-container"><canvas id="spiderCanvas" height="320"></canvas></div>
+      </div>
+    </div>`;
+
+  const allE = [];
+  TESTS.forEach(t=>getAttempts(t.id).forEach(a=>allE.push({...a,testName:t.name,cat:t.cat})));
+  allE.sort((a,b)=>b.date.localeCompare(a.date));
+  const recent = allE.slice(0,6);
+  const rl = document.getElementById('recent-list');
+  if (!recent.length) {
+    rl.innerHTML = `<div class="empty-state"><div class="e-icon">📋</div>No scores yet — head to All tests to log your first result.</div>`;
+  } else {
+    rl.innerHTML = recent.map(e=>`
+      <div class="activity-row">
+        <div class="activity-dot" style="background:${CAT_COLORS[e.cat]}"></div>
+        <div class="activity-name">${e.testName}</div>
+        <div class="activity-date">${e.date}</div>
+        <span class="score-badge ${scoreBadgeClass(e.score)}">${e.score}/10</span>
+      </div>`).join('');
+  }
+
+  setTimeout(()=>{
+    if (spiderChart) { spiderChart.destroy(); spiderChart=null; }
+    const ctx = document.getElementById('spiderCanvas');
+    if (!ctx) return;
+    const vals = CATS.map(c=>catAvg(c));
+    spiderChart = new Chart(ctx, {
+      type: 'radar',
+      data: {
+        labels: CATS,
+        datasets: [{
+          data: vals,
+          backgroundColor: 'rgba(45,91,227,0.1)',
+          borderColor: '#2D5BE3',
+          borderWidth: 2.5,
+          pointBackgroundColor: CATS.map(c=>CAT_COLORS[c]),
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 6,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          r: {
+            min: 0, max: 10,
+            ticks: { stepSize: 2, font: {size:10}, color:'#A89F95', backdropColor:'transparent' },
+            pointLabels: { font: {size:11, family:'DM Sans'}, color:'#1A1714' },
+            grid: { color:'#E8E3DC' },
+            angleLines: { color:'#E8E3DC' },
+          }
+        }
+      }
+    });
+  }, 50);
+}
+
+// ── Tests tab ─────────────────────────────────────────────────────────────
+let activeCat = 'All';
+function renderTests() {
+  const c = document.getElementById('content');
+  const cats = ['All',...CATS];
+  const filtered = activeCat==='All' ? TESTS : TESTS.filter(t=>t.cat===activeCat);
+  c.innerHTML = `
+    <div class="cat-filters">
+      ${cats.map(cat=>`<button class="cat-btn ${activeCat===cat?'active':''}" onclick="setCat('${cat}')">${cat}</button>`).join('')}
+    </div>
+    <div class="card">
+      <div class="tests-header">
+        <span>Test</span><span>Category</span><span>Mastery</span><span>Latest</span><span>Status</span><span></span>
+      </div>
+      ${filtered.map(t=>{
+        const stars = computeStars(t.id);
+        const latest = getLatest(t.id);
+        const attm = getAttempts(t.id).length;
+        const status = getStatus(t.id);
+        return `<div class="test-row">
+          <div>
+            <div class="test-name">${t.name}</div>
+            <div style="font-size:0.75rem;color:var(--text-3);margin-top:2px">${attm} attempt${attm!==1?'s':''}</div>
+          </div>
+          <div>
+            <span class="cat-pill" style="background:${CAT_BG[t.cat]};color:${CAT_COLORS[t.cat]}">
+              <span style="width:6px;height:6px;border-radius:50%;background:${CAT_COLORS[t.cat]};display:inline-block;flex-shrink:0"></span>
+              ${t.cat}
+            </span>
+          </div>
+          <div class="stars-row">${starsHTML(stars)}</div>
+          <div>${latest?`<span class="score-badge ${scoreBadgeClass(latest.score)}">${latest.score}/10</span>`:`<span style="color:var(--text-3);font-size:0.85rem">—</span>`}</div>
+          <div>${statusPill(status)}</div>
+          <div style="text-align:right"><button class="add-btn" onclick="openModal('${t.id}','${t.name.replace(/'/g,"\\'")}','${t.cat}')">+ Score</button></div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+function setCat(cat) { activeCat=cat; renderTests(); }
+
+// ── Progress ──────────────────────────────────────────────────────────────
+let progChart = null;
+let selectedTestIdx = 0;
+function renderProgress() {
+  const c = document.getElementById('content');
+  c.innerHTML = `
+    <div class="test-select-wrap">
+      <label>Select a test</label>
+      <select class="test-select" id="test-select" onchange="updateProgress(this.selectedIndex)">
+        ${TESTS.map((t,i)=>`<option value="${i}" ${i===selectedTestIdx?'selected':''}>${t.name}</option>`).join('')}
+      </select>
+    </div>
+    <div id="prog-card"></div>`;
+  renderProgressFor(selectedTestIdx);
+}
+function updateProgress(idx) { selectedTestIdx=idx; renderProgressFor(idx); }
+function renderProgressFor(idx) {
+  const t = TESTS[idx];
+  const attempts = getAttempts(t.id);
+  const pc = document.getElementById('prog-card');
+  if (!pc) return;
+  if (!attempts.length) {
+    pc.innerHTML = `<div class="card"><div class="empty-state"><div class="e-icon">📈</div>No scores logged yet for ${t.name}.<br>Log your first attempt to see progression.</div></div>`;
+    return;
+  }
+  const stars = computeStars(t.id);
+  pc.innerHTML = `<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div style="font-family:'Instrument Serif',serif;font-size:1.15rem">${t.name}</div>
+        <div style="font-size:0.8rem;color:var(--text-3);margin-top:2px">${t.cat}${t.tpp?` · ${t.tpp} TPP`:''}${t.planches?` · ${t.planches} planches`:''}</div>
+      </div>
+      <div class="stars-row" style="gap:3px">${starsHTML(stars,'1.1rem')}</div>
+    </div>
+    <canvas id="progCanvas" height="200"></canvas>
+    <div class="prog-history" id="prog-history"></div>
+  </div>`;
+
+  setTimeout(()=>{
+    if (progChart) { progChart.destroy(); progChart=null; }
+    const ctx = document.getElementById('progCanvas');
+    if (!ctx) return;
+    const col = CAT_COLORS[t.cat]||'#2D5BE3';
+    progChart = new Chart(ctx, {
+      type:'line',
+      data: {
+        labels: attempts.map(a=>a.date),
+        datasets: [{
+          data: attempts.map(a=>a.score),
+          borderColor: col,
+          backgroundColor: col+'18',
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: col,
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 6,
+          borderWidth: 2.5,
+        }]
+      },
+      options: {
+        responsive:true,
+        plugins:{ legend:{display:false} },
+        scales:{
+          y:{ min:0, max:10, ticks:{stepSize:2,color:'#A89F95',font:{size:11}}, grid:{color:'#F0EDE8'} },
+          x:{ ticks:{color:'#A89F95',font:{size:10},maxRotation:30}, grid:{display:false} }
+        }
+      }
+    });
+    const hist = document.getElementById('prog-history');
+    hist.innerHTML = `<div style="font-size:0.72rem;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin:18px 0 10px">Attempt history</div>` +
+      [...attempts].reverse().map((a,i,arr)=>{
+        const origIdx = attempts.length-1-i;
+        let trendHTML = `<span class="trend-flat" style="width:44px"></span>`;
+        if (origIdx>0) {
+          const diff = a.score - attempts[origIdx-1].score;
+          trendHTML = diff>0 ? `<span class="trend-up">↑ +${diff}</span>` :
+                      diff<0 ? `<span class="trend-down">↓ ${diff}</span>` :
+                               `<span class="trend-flat">—</span>`;
+        }
+        return `<div class="hist-row">
+          <span class="hist-date">${a.date}</span>
+          <div class="hist-bar-wrap"><div class="hist-bar" style="width:${a.score*10}%;background:${scoreColor(a.score)}"></div></div>
+          ${trendHTML}
+          <span class="hist-score" style="color:${scoreColor(a.score)}">${a.score}/10</span>
+        </div>`;
+      }).join('');
+  }, 50);
+}
+
+// ── Insights ──────────────────────────────────────────────────────────────
+function renderInsights() {
+  const c = document.getElementById('content');
+  const insights = [];
+  TESTS.forEach(t=>{
+    const a = getAttempts(t.id);
+    if (a.length>=2) {
+      const diff = a[a.length-1].score - a[0].score;
+      if (diff>=2) insights.push({icon:'📈',text:`<strong>${t.name}</strong> improved by <strong>+${diff} pts</strong> over ${a.length} attempts.`});
+      else if (diff<=-2) insights.push({icon:'📉',text:`<strong>${t.name}</strong> dropped by <strong>${diff} pts</strong> — consider more practice.`});
+    }
+  });
+  const catData = CATS.map(c=>({cat:c,avg:catAvg(c),count:TESTS.filter(t=>t.cat===c&&getAttempts(t.id).length).length})).filter(d=>d.count);
+  if (catData.length) {
+    const best = catData.reduce((a,c)=>c.avg>a.avg?c:a);
+    const worst = catData.reduce((a,c)=>c.avg<a.avg?c:a);
+    insights.push({icon:'⭐',text:`Strongest category: <strong>${best.cat}</strong> (avg ${best.avg.toFixed(1)}/10)`});
+    if (worst!==best) insights.push({icon:'🎯',text:`Focus area: <strong>${worst.cat}</strong> — lowest average (${worst.avg.toFixed(1)}/10)`});
+  }
+  const mastered = TESTS.filter(t=>getStatus(t.id)==='Mastered');
+  if (mastered.length) insights.push({icon:'🏆',text:`Mastered: <strong>${mastered.map(t=>t.name).join(', ')}</strong>`});
+  const untested = TESTS.filter(t=>!getAttempts(t.id).length).length;
+  if (untested) insights.push({icon:'📋',text:`<strong>${untested} tests</strong> haven't been attempted yet.`});
+  const total = TESTS.reduce((s,t)=>s+getAttempts(t.id).length,0);
+  if (total>=5) insights.push({icon:'💪',text:`<strong>${total} total attempts</strong> logged — consistency is the key!`});
+
+  const insightsHTML = insights.length
+    ? insights.map((ins,i)=>`<div class="insight-card" style="animation-delay:${i*0.06}s"><span class="insight-icon">${ins.icon}</span><div class="insight-text">${ins.text}</div></div>`).join('')
+    : `<div class="empty-state"><div class="e-icon">💡</div>Log at least 2 scores per test to see personalized insights.</div>`;
+
+  c.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 380px;gap:18px">
+      <div>
+        <div class="card">
+          <div class="card-title">Insights</div>
+          ${insightsHTML}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Category breakdown</div>
+        <div class="cat-breakdown">
+          ${CATS.map(cat=>{
+            const avg=catAvg(cat);
+            const done=TESTS.filter(t=>t.cat===cat&&getAttempts(t.id).length).length;
+            const total=TESTS.filter(t=>t.cat===cat).length;
+            return `<div class="cb-row">
+              <div class="cb-name" style="color:${CAT_COLORS[cat]}">${cat}</div>
+              <div class="cb-bar-wrap"><div class="cb-bar" style="width:${avg*10}%;background:${CAT_COLORS[cat]}"></div></div>
+              <div class="cb-avg" style="color:${done?scoreColor(avg):'var(--text-3)'}">${done?avg.toFixed(1)+'/10':'—'}</div>
+              <div class="cb-count">${done}/${total}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────
+let currentTestId = null;
+function openModal(id, name, cat) {
+  currentTestId = id;
+  document.getElementById('modal-title').textContent = name;
+  document.getElementById('modal-sub').textContent = cat + (TESTS.find(t=>t.id===id).tpp ? ` · ${TESTS.find(t=>t.id===id).tpp} TPP` : '');
+  document.getElementById('score-slider').value = 5;
+  document.getElementById('score-preview').textContent = '5';
+  document.getElementById('score-preview').style.color = scoreColor(5);
+  document.getElementById('score-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); currentTestId=null; }
+function updateSlider(v) {
+  document.getElementById('score-preview').textContent = v;
+  document.getElementById('score-preview').style.color = scoreColor(parseInt(v));
+}
+function saveScore() {
+  if (!currentTestId) return;
+  const score = parseInt(document.getElementById('score-slider').value);
+  const date = document.getElementById('score-date').value;
+  if (!date) return;
+  if (!scores[currentTestId]) scores[currentTestId] = [];
+  scores[currentTestId].push({score, date});
+  saveScores();
+  closeModal();
+  switchTab(activeTab);
+}
+document.getElementById('modal').addEventListener('click', e=>{ if(e.target===document.getElementById('modal')) closeModal(); });
+
+// ── Init ──────────────────────────────────────────────────────────────────
+switchTab('overview');
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
+</body>
+</html>
